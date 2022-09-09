@@ -37,7 +37,7 @@ class Helper:
         user = self.config['cluster'][node_category][node_num]['ssh_access']['user']
         hostname = self.config['cluster'][node_category][node_num]['ssh_access']['hostname']
         identity_file = self.config['cluster'][node_category][node_num]['ssh_access']['identityFile']
-        print("Running command on %s" % node_name)
+        print('Running command: "%s" on %s' % (cmd, node_name))
 
         out, err = subprocess.Popen(["ssh", "-o", "IdentitiesOnly=yes", "-i", identity_file, f"{user}@{hostname}", cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
         if (out):

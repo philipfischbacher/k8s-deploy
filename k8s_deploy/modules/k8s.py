@@ -4,6 +4,7 @@ import subprocess
 import time
 from k8s_deploy.modules.helper import Helper 
 from k8s_deploy.modules.container_runtime import ContainerRuntime
+from k8s_deploy.modules.networking import Networking
 
 K8S_LATEST_VERSION_URL='https://dl.k8s.io/release/stable.txt'
 ENCODING='utf-8'
@@ -13,6 +14,8 @@ class K8S_Cluster:
     def __init__(self, config_file):
         self.hp = Helper(config_file)
         self.config = self.get_config()
+        self.network = Networking(self.hp)
+        self.crt = ContainerRuntime(self.hp)
 
     def install_cluster(self):
         k8s_version = self.get_k8s_version()
@@ -23,14 +26,19 @@ class K8S_Cluster:
         num = 0
         self.init_controlplane(num)
 
-        workers = len(self.config['cluster']['workers'])
-        print('Number of worker nodes', workers)
-        for node_num in range(0, workers):
-            if node_num == 0:
-                print('Create worker node:', self.config['cluster']['workers'][node_num]['name'])
-                self.init_worker_node(node_num)
+        num_workers = len(self.config['cluster']['workers'])
+        print('Number of worker nodes', num_workers)
+        for node_num in range(0, num_workers):
+            print('Create worker node:', self.config['cluster']['workers'][node_num]['name'])
+            self.init_worker_node(node_num)
 
         print('Finished creating cluster with Kubernetes version: ' + k8s_version)
+
+        print('Adding extras')
+
+        print('Install CNI plugin')
+        self.set_current_node_to_controlplane()
+        self.network.install_cni_plugin()
 
     def set_current_node_to_controlplane(self):
         current_node = {
@@ -57,47 +65,27 @@ class K8S_Cluster:
         self.add_google_cloud_pub_key()
 
         print('Networking Prerequisites')
-        self.networking_prerequisites()
+        self.network_prerequisites()
 
         print('Update packages index')
         self.apt_update()
 
-    def networking_prerequisites(self):
-        print('Forwarding IPv4 and letting iptables see bridged traffic')
-        cmd="""
-cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
-overlay
-br_netfilter
-EOF
-        """
-        self.remote_command(cmd)
+    def network_prerequisites(self):
+        self.network.network_prerequisites()
 
-        cmd = "sudo modprobe overlay"
-        self.remote_command(cmd)
-        
-        cmd = "sudo modprobe br_netfilter"
-        self.remote_command(cmd)
-
-        cmd="""
-cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
-net.bridge.bridge-nf-call-iptables = 1
-net.ipv4.ip_forward = 1
-net.bridge.bridge-nf-call-ip6tables = 1
-EOF
-            """
-        self.remote_command(cmd)
-
-        cmd = "sudo sysctl --system"
-        self.remote_command(cmd)
-
+    def install_cni_plugin(self):
+        self.network.install_cni_plugin()
         
     def setup_container_runtime(self):
-        crt = ContainerRuntime(self.hp)
-        crt.setup_container_runtime()
+        self.crt.setup_container_runtime()
 
     def init_controlplane(self, node_num):
-        
-        self.init_node('controlplanes', node_num)
+        current_node = {
+            'node_category': 'controlplanes',
+            'node_num': node_num
+        }
+        self.network_prerequisites()
+        self.init_node()
 
         pod_network_cidr = self.config['network']['pod_network_cidr']
         endpoint = self.config['cluster']['controlplanes'][node_num]['endpoints']['ip']['internal']
@@ -108,25 +96,30 @@ EOF
 
         self.make_kube_config()
 
+
     def init_worker_node(self, node_num):
-        node_name = self.config['cluster']['workers'][node_num]['name']
-        print('Initializing worker node: ' + node_name)
-        self.init_node('workers', node_num)
-
-        #internal_ip = self.config['cluster']['workers'][node_num]['endpoints']['ip']['internal']
-        node_name = self.config['cluster']['workers'][node_num]['name']
-        print('Joining node to cluster')
-        self.join_worker_node(node_name)
-
-        self.add_worker_node_role(node_name)
-
-    def init_node(self, category, node_num):
-        #print(self.get_node_details(category, node_num))
         current_node = {
-            'node_category': category,
+            'node_category': 'workers',
             'node_num': node_num
         }
         self.set_current_node(current_node)
+
+        print('Initializing worker node: ' + self.get_node_name())
+        self.init_node()
+
+        print('Joining node to cluster')
+        self.join_node()
+
+        self.add_worker_node_role()
+
+    def get_node_name(self):
+        node = self.get_current_node()
+        return self.config['cluster'][node['node_category']][node['node_num']]['name']
+
+    def init_node(self):
+        print("Dummy command to ssh for the first time and establish host authenticity")
+        cmd = "echo first time ssh"
+        self.remote_command(cmd)
 
         print('Setup Container Runtime')
         self.setup_container_runtime()
@@ -135,7 +128,7 @@ EOF
         self.prepare_environment()
 
         print('Setup networking prerequisites')
-        self.networking_prerequisites()
+        self.network_prerequisites()
 
         print('Installing Kubernetes Components')
         self.install_k8s_components()
@@ -155,6 +148,10 @@ EOF
 
 
     def make_kube_config(self):
+        # remove the original kube config file to avavoid the installation from hanging
+        cmd = "sudo rm -r  $HOME/.kube"
+        self.remote_command(cmd)
+        
         cmd = "mkdir -p $HOME/.kube"
         self.remote_command(cmd)
 
@@ -172,19 +169,25 @@ EOF
         print('Get join command from controlplane')
         cmd = "sudo kubeadm token create --print-join-command"
         self.config['join_command'] = "sudo " + self.remote_command(cmd).rstrip()
+
         self.set_current_node(current_node)
 
-    def join_worker_node(self, node_name):
+    def join_node(self):
         print('Run the join command to join the node to cluster')
+        node_name = self.get_node_name()
         self.config_join_command()
-        cmd = self.config['join_command'] + f" --node-name {node_name}"
-        print("Display full join command:", cmd)
-        self.remote_command(cmd)
-        time.sleep(30)
 
-    def add_worker_node_role(self, node_name):
+        # Better to reset the node first
+        cmd = "sudo kubeadm reset -f"
+        self.remote_command(cmd)
+
+        cmd = self.config['join_command'] + f" --node-name {node_name}"
+        self.remote_command(cmd)
+
+    def add_worker_node_role(self):
         print ('Label the worker node')
         current_node = self.get_current_node()
+        node_name = self.get_node_name()
         self.set_current_node_to_controlplane()
         
         cmd = f"kubectl label node {node_name} node-role.kubernetes.io/worker=worker"

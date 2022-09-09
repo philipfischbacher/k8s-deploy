@@ -1,5 +1,9 @@
 """Container Runtime setup module"""
 
+CONTAINER_RUNTIMES = [
+    'containerd'
+    #'docker'
+]
 
 class ContainerRuntime:
     def __init__(self, helper):
@@ -8,32 +12,27 @@ class ContainerRuntime:
         self.container_runtime = self.config['container_runtime']['name']
 
     def setup_container_runtime(self):
-        if self.container_runtime == 'containerd':
-            self.install_containerd_tarball()
+        if self.check_container_runtime():
+            match self.container_runtime:
+                case 'containerd':
+                    self.install_containerd_tarball()
+                case _:
+                    print('Container Runtime is not defined.')
+
         else:
-            print('Sorry, this container runtime is not available with this script.')
-            #self.install_docker()
+            print('Sorry, cannot install the %s container runtime.' % self.container_runtime)
+
+    def check_container_runtime(self):
+        if self.container_runtime in CONTAINER_RUNTIMES:
+            return True
+        else:
+            return False
 
     def install_docker(self):
         print('Sorry, can\'t install docker yet.')
         
     def install_containerd(self):
-        cmd = "sudo apt-get update"
-        self.remote_command(cmd)
-
-        cmd = "sudo apt-get -y install containerd"
-        self.remote_command(cmd)
-
-        self.configure_containerd()
-
-        #cmd = "sudo mkdir -p /etc/containerd"
-        #self.remote_command(cmd)
-
-        #cmd = "containerd config default | sudo tee /etc/containerd/config.toml"
-        #self.remote_command(cmd)
-
-        #cmd = "sudo systemctl restart containerd"
-        #self.remote_command(cmd)
+        self.install_containerd_tarball()
 
     def install_containerd_tarball(self):
         print('Download containerd')
@@ -70,6 +69,16 @@ class ContainerRuntime:
         self.remote_command(cmd)
 
         self.configure_containerd()
+
+    def install_containerd_package(self):
+        cmd = "sudo apt-get update"
+        self.remote_command(cmd)
+
+        cmd = "sudo apt-get -y install containerd"
+        self.remote_command(cmd)
+
+        self.configure_containerd()
+
         
     def configure_containerd(self):
         print('Setup containerd config.toml file')
