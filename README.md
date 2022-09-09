@@ -15,26 +15,13 @@ You can either install it or just run using the k8s_deploy.py. But you must make
 
 ```
 chmod +x k8s_deploy.py
+
 ./k8s_deploy.py --help
 ```
+#### To run
+run `./k8s_deploy.py [CONFIG FILE]`
 
-#### Installed Package Command Line
-If you installed the module. You can use the `pkgstats` command.
+####_Example_
 ```
-k8s-deploy --help
-```
-or
-```
-k8s-deploy -h
-```
-
-
-## Example
-Using the package command line.
-```
-k8s-deploy --config-file=config.yaml
-```
-
-_Result_
-```
+./k8s-deploy config.yaml
 ```
