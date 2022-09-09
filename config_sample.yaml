@@ -1,0 +1,64 @@
+cluster:
+  name: "phil_k8s"
+  k8s_version: "latest"
+  
+  controlplanes:
+    - name: "controlplane"
+      endpoints:
+        hostname:
+          external: "[PUBLIC HOSTNAME]"
+          internal: "[PRIVATE HOSTNAME]"
+        ip:
+          external: "[PUBLIC IP]"
+          internal: "[PRIVATE IP]"
+      ssh_access:
+        user: "[SSH_USER]"
+        hostname: "[HOSTNAME/IP FOR SSH]"
+        identityFile: "[SSH IDENTITY FILE]"
+  workers:
+    - name: "node01"
+      endpoints:
+        hostname:
+          external: "[PUBLIC HOSTNAME]"
+          internal: "[PRIVATE HOSTNAME]"
+        ip:
+          external: "[PUBLIC IP]"
+          internal: "[PRIVATE IP]"
+      ssh_access:
+        user: "[SSH_USER]"
+        hostname: "[HOSTNAME/IP FOR SSH]"
+        identityFile: "[SSH IDENTITY FILE]"
+    - name: "node02"
+      endpoints:
+        hostname:
+          external: "[PUBLIC HOSTNAME]"
+          internal: "[PRIVATE HOSTNAME]"
+        ip:
+          external: "[PUBLIC IP]"
+          internal: "[PRIVATE IP]"
+      ssh_access:
+        user: "[SSH_USER]"
+        hostname: "[HOSTNAME/IP FOR SSH]"
+        identityFile: "[SSH IDENTITY FILE]"
+    - name: "node03"
+      endpoints:
+        hostname:
+          external: "[PUBLIC HOSTNAME]"
+          internal: "[PRIVATE HOSTNAME]"
+        ip:
+          external: "[PUBLIC IP]"
+          internal: "[PRIVATE IP]"
+      ssh_access:
+        user: "[SSH_USER]"
+        hostname: "[HOSTNAME/IP FOR SSH]"
+        identityFile: "[SSH IDENTITY FILE]"
+network:
+  pod_network_cidr: "10.244.0.0/16"
+  cni_plugin:
+    name: "flannel"
+container_runtime:
+  name: "containerd"
+  versions:
+    containerd: "1.6.8"
+    runc: "1.1.4"
+
