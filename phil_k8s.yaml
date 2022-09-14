@@ -1,0 +1,53 @@
+cluster:
+  k8s_version: "latest"
+  controlplanes:
+  -name: "controlplane"
+    endpoints:
+      hostname:
+        external: "ec2-35-92-75-211.us-west-2.compute.amazonaws.com"
+        internal: "ip-172-31-34-131.us-west-2.compute.internal"
+      ip:
+        external: "35.92.75.211"
+        internal: "172.31.34.131"
+      ssh_access:
+        user: "ubuntu"
+        hostname: "ec2-35-92-75-211.us-west-2.compute.amazonaws.com"
+        identityFile: "/home/phil/.automaton/ec2/us-west-2/phil_k8s/provider_ssh_key"
+  workers:
+    -name: "node_01"
+    endpoints:
+      hostname:
+        external: "ec2-34-217-99-163.us-west-2.compute.amazonaws.com"
+        internal: "ip-172-31-37-4.us-west-2.compute.internal"
+      ip:
+        external: "34.217.99.163"
+        internal: "172.31.37.4"
+    -name: "node_02"
+    endpoints:
+      hostname:
+        external: "ec2-35-164-130-248.us-west-2.compute.amazonaws.com"
+        internal: "ip-172-31-39-118.us-west-2.compute.internal"
+      ip:
+        external: "35.164.130.248"
+        internal: "172.31.39.118"
+    -name: "node_03"
+    endpoints:
+      hostname:
+        external: "ec2-34-213-162-248.us-west-2.compute.amazonaws.com"
+        internal: "ip-172-31-47-118.us-west-2.compute.internal"
+      ip:
+        external: "34.213.162.248"
+        internal: "172.31.47.118"
+network:
+  pod_network_cidr: "10.244.0.0/16"
+  cni_plugin:
+    name: "flannel"
+container_runtime:
+  name: "containerd"
+  versions:
+    containerd: "1.6.8"
+    runc: "1.1.4"
+helm:
+  version: "latest"
+  charts:
+    - name: "k8ssandra"
