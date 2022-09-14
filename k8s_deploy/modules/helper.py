@@ -15,14 +15,16 @@ class Helper:
             'node_num': 0
         }
         self.current_node = current_node
+        self.verbosity = True
 
     def get_config(self):
         with open(self.config_file, "r") as stream:
             try:
                 config = yaml.safe_load(stream)
+                return config
             except yaml.YAMLError as exc:
                 print(exc)
-        return config
+                return exc
 
     def set_current_node(self, node):
         self.current_node = node
@@ -37,11 +39,13 @@ class Helper:
         user = self.config['cluster'][node_category][node_num]['ssh_access']['user']
         hostname = self.config['cluster'][node_category][node_num]['ssh_access']['hostname']
         identity_file = self.config['cluster'][node_category][node_num]['ssh_access']['identityFile']
-        print('Running command: "%s" on %s' % (cmd, node_name))
+        if (self.verbosity):
+            print('Running command: "%s" on %s' % (cmd, node_name))
 
         out, err = subprocess.Popen(["ssh", "-o", "IdentitiesOnly=yes", "-i", identity_file, f"{user}@{hostname}", cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
         if (out):
-            print("Result:", out.decode(ENCODING))
+            if (self.verbosity):
+                print("Result:", out.decode(ENCODING))
             return out.decode(ENCODING)
         if (err):
             print("Error:", err.decode(ENCODING))

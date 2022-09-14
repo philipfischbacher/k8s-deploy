@@ -9,10 +9,13 @@ class Networking:
     def __init__(self, helper):
         self.hp = helper
         self.config = self.get_config()
+        print('Config:', self.config)
+        print('Network Plugin Name:', self.config['network']['cni_plugin']['name'])
         self.cni_plugin = self.config['network']['cni_plugin']['name']
 
     def install_cni_plugin(self):
         if self.check_cni_plugin():
+
             match self.cni_plugin:
                 case 'flannel':
                     self.install_flannel()

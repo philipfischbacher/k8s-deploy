@@ -1,26 +1,33 @@
 """Container Runtime setup module"""
 
+from k8s_deploy.modules.container_runtimes.docker import Docker
+
 CONTAINER_RUNTIMES = [
-    'containerd'
-    #'docker'
+    'containerd',
+    'docker'
 ]
 
 class ContainerRuntime:
     def __init__(self, helper):
         self.hp = helper
         self.config = self.get_config()
-        self.container_runtime = self.config['container_runtime']['name']
+        self.container_runtime= self.config['container_runtime']['name']
+        print('Container runtime', self.container_runtime)
 
     def setup_container_runtime(self):
         if self.check_container_runtime():
             match self.container_runtime:
                 case 'containerd':
-                    self.install_containerd_tarball()
+                    self.install_containerd()
+                case 'docker':
+                    self.docker = Docker(self.helper)
+                    self.docker.install()
                 case _:
                     print('Container Runtime is not defined.')
 
         else:
             print('Sorry, cannot install the %s container runtime.' % self.container_runtime)
+            print('Please choose from:', ', '.join(CONTAINER_RUNTIMES))
 
     def check_container_runtime(self):
         if self.container_runtime in CONTAINER_RUNTIMES:

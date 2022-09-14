@@ -18,6 +18,9 @@ class K8S_Cluster:
         self.crt = ContainerRuntime(self.hp)
 
     def install_cluster(self):
+        
+        self.establish_host_authenticity()
+
         k8s_version = self.get_k8s_version()
         print('Installing Cluster with Kubernetes version: ' + k8s_version)
         self.set_current_node_to_controlplane()
@@ -116,10 +119,31 @@ class K8S_Cluster:
         node = self.get_current_node()
         return self.config['cluster'][node['node_category']][node['node_num']]['name']
 
+    def establish_host_authenticity(self):
+        print("Dummy command to ssh for the first time and establish host authenticity with each node")
+        print("You will need to enter 'yes' if it is the first time connecting")
+        num_cp = len(self.config['cluster']['controlplanes'])
+        num_workers = len(self.config['cluster']['workers'])
+
+        for node_num in range(0, num_cp):
+            current_node = {
+                'node_category': 'controlplanes',
+                'node_num': node_num
+            }
+            self.set_current_node(current_node)
+            cmd = "echo first time ssh"
+            self.remote_command(cmd)
+
+        for node_num in range(0, num_workers):
+            current_node = {
+                'node_category': 'workers',
+                'node_num': node_num
+            }
+            self.set_current_node(current_node)
+            cmd = "echo first time ssh check"
+            self.remote_command(cmd)
+
     def init_node(self):
-        print("Dummy command to ssh for the first time and establish host authenticity")
-        cmd = "echo first time ssh"
-        self.remote_command(cmd)
 
         print('Setup Container Runtime')
         self.setup_container_runtime()
@@ -200,14 +224,15 @@ class K8S_Cluster:
         self.remote_command(cmd)
 
     def install_k8s_components(self):
-        print('Installing kubeadm')
-        self.install_kubeadm()
 
         print('Installing kubelet')
         self.install_kubelet()
 
         print('Installing kubectl')
         self.install_kubectl()
+
+        print('Installing kubeadm')
+        self.install_kubeadm()
 
 
     def get_k8s_version(self):
