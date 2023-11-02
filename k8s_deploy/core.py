@@ -4,15 +4,18 @@ Main Module
 """
 import argparse
 import logging
+import sys
 
-#from k8s_deploy.modules.helper import Helper
-from k8s_deploy.modules.k8s import K8S_Cluster as Cluster
+LOGGING_FORMAT="%(name)s - %(levelname)s - %(asctime)s %(message)s"
+
+from k8s_deploy.modules.cluster import Cluster
 
 def main():
     """Main Function to install Kubernetes remotely
     from the command line.
     """
-
+    logging.basicConfig(format=LOGGING_FORMAT, datefmt='%y-%b-%d %H:%M:%S')
+    log = logging.getLogger("k8s-log")
     parser = parser_init()
     args = parser.parse_args()
 
@@ -20,16 +23,14 @@ def main():
         config_file = args.config_file
 
     if args.verbose:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.info('Set logging level to debug')
+        log.setLevel(logging.DEBUG)
 
     try:
         cluster = Cluster(config_file)
         cluster.install_cluster()
     except ValueError as e:
-        print('Error:', e)
-
-#def install_cluster(cluster_name):
-    #k8s.install_cluster(cluster_name)
+        log.error('Error:', e)
 
 def parser_init():
     """Function to define the variables for parsing the cli arguments"""
@@ -50,6 +51,7 @@ def parser_init():
     parser.add_argument(
         '--verbose',
         '-v',
+        default=False,
         action="store_true",
         help='Increase verbose output.'
     )
